@@ -99,6 +99,8 @@ func redirect(c *gin.Context, link *model.Link) {
 func proxy(c *gin.Context, link *model.Link, file model.Obj, proxyRange bool) {
 	defer link.Close()
 	var err error
+	c.Request.Header.Set("X-Forwarded-For", "8.8.8.8")
+	c.Request.Header.Set("X-Real-IP", "8.8.8.8")
 	if link.URL != "" && setting.GetBool(conf.ForwardDirectLinkParams) {
 		query := c.Request.URL.Query()
 		for _, v := range conf.SlicesMap[conf.IgnoreDirectLinkParams] {

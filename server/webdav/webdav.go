@@ -235,6 +235,11 @@ func (h *Handler) handleGetHeadPost(w http.ResponseWriter, r *http.Request) (sta
 	if fi.IsDir() {
 		return http.StatusMethodNotAllowed, nil
 	}
+	
+	// Add fake IP header for proxy requests
+	r.Header.Set("X-Forwarded-For", "8.8.8.8")
+	r.Header.Set("X-Real-IP", "8.8.8.8")
+
 	// Let ServeContent determine the Content-Type header.
 	storage, _ := fs.GetStorage(reqPath, &fs.GetStoragesArgs{})
 	if storage.GetStorage().Webdav302() {

@@ -1,8 +1,10 @@
-name: Test Build
+name: build
 
 on:
+  push:
+    branches: [ 'main' ]
   pull_request:
-    branches: ["main"]
+    branches: [ 'main' ]
   workflow_dispatch:
 
 concurrency:
@@ -13,17 +15,14 @@ jobs:
   build:
     strategy:
       matrix:
-        target:
-          - darwin-amd64
-          - darwin-arm64
+        platform: [ubuntu-latest]
+        target: 
           - windows-amd64
-          - linux-arm64-musl
           - linux-amd64-musl
-          - windows-arm64
-          - android-arm64
-    name: Build ${{ matrix.target }}
-    runs-on: ubuntu-latest
+    name: Build
+    runs-on: ${{ matrix.platform }}
     steps:
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -33,12 +32,10 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24.5"
+          go-version: '1.24.5"
 
       - name: Setup web
         run: bash build.sh dev web
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
         uses: OpenListTeam/cgo-actions@v1.2.2
@@ -58,5 +55,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: openlist_${{ steps.short-sha.outputs.sha }}_${{ matrix.target }}
+          name: openlist_${{ env.SHA }}_${{ matrix.target }}
           path: build/*
