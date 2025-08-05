@@ -4,6 +4,7 @@ import (
 	"context"
 	stdpath "path"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
@@ -255,9 +256,31 @@ func Link(ctx context.Context, storage driver.Driver, path string, args model.Li
 	if storage.Config().CheckStatus && storage.GetStorage().Status != WORK {
 		return nil, nil, errors.Errorf("storage not init: %s", storage.GetStorage().Status)
 	}
-	file, err := GetUnwrap(ctx, storage, path)
-	if err != nil {
-		return nil, nil, errors.WithMessage(err, "failed to get file")
+	var (
+		file model.Obj
+		err  error
+	)
+	// use cache directly
+	dir, name := stdpath.Split(stdpath.Join(storage.GetStorage().MountPath, path))
+	if cacheFiles, ok := listCache.Get(strings.TrimSuffix(dir, "/")); ok {
+		for _, f := range cacheFiles {
+			if f.GetName() == name {
+				file = model.UnwrapObj(f)
+				break
+			}
+		}
+	} else {
+		if g, ok := storage.(driver.GetObjInfo); ok {
+			file, err = g.GetObjInfo(ctx, path)
+		} else {
+			file, err = GetUnwrap(ctx, storage, path)
+		}
+	}
+	if file == nil {
+		if err != nil {
+			return nil, nil, errors.WithMessage(err, "failed to get file")
+		}
+		return nil, nil, errors.WithStack(errs.ObjectNotFound)
 	}
 	if file.IsDir() {
 		return nil, nil, errors.WithStack(errs.NotFile)
@@ -268,7 +291,7 @@ func Link(ctx context.Context, storage driver.Driver, path string, args model.Li
 		return link, file, nil
 	}
 
-	var forget utils.CloseFunc
+	var forget any
 	fn := func() (*model.Link, error) {
 		link, err := storage.Link(ctx, file, args)
 		if err != nil {
@@ -277,7 +300,7 @@ func Link(ctx context.Context, storage driver.Driver, path string, args model.Li
 		if link.Expiration != nil {
 			linkCache.Set(key, link, cache.WithEx[*model.Link](*link.Expiration))
 		}
-		link.Add(forget)
+		link.AddIfCloser(forget)
 		return link, nil
 	}
 
@@ -289,13 +312,13 @@ func Link(ctx context.Context, storage driver.Driver, path string, args model.Li
 		return link, file, err
 	}
 
-	forget = func() error {
+	forget = utils.CloseFunc(func() error {
 		if forget != nil {
 			forget = nil
 			linkG.Forget(key)
 		}
 		return nil
-	}
+	})
 	link, err, _ := linkG.Do(key, fn)
 	if err == nil && !link.AcquireReference() {
 		link, err, _ = linkG.Do(key, fn)
