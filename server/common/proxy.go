@@ -10,9 +10,9 @@ import (
 	"maps"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
+	"github.com/OpenListTeam/OpenList/v4/internal/download_proxy"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/net"
-	"github.com/OpenListTeam/OpenList/v4/internal/sign"
 	"github.com/OpenListTeam/OpenList/v4/internal/stream"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 )
@@ -140,16 +140,5 @@ func (ww *WrittenResponseWriter) IsWritten() bool {
 }
 
 func GenerateDownProxyURL(storage *model.Storage, reqPath string) string {
-	if storage.DownProxyURL == "" {
-		return ""
-	}
-	query := ""
-	if !storage.DisableProxySign {
-		query = "?sign=" + sign.Sign(reqPath)
-	}
-	return fmt.Sprintf("%s%s%s",
-		strings.Split(storage.DownProxyURL, "\n")[0],
-		utils.EncodePath(reqPath, true),
-		query,
-	)
+	return download_proxy.URL(storage, reqPath)
 }

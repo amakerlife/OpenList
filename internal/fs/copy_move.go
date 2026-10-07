@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
+	"github.com/OpenListTeam/OpenList/v4/internal/download_proxy"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
@@ -244,7 +245,15 @@ func (t *FileTransferTask) RunWithNextTaskCallback(f func(nextTask *FileTransfer
 	}
 
 	t.Status = "getting src object link"
-	link, srcObj, err := op.Link(t.Ctx(), t.SrcStorage, t.SrcActualPath, model.LinkArgs{})
+	var link *model.Link
+	if proxyURL := download_proxy.URL(t.SrcStorage.GetStorage(), utils.GetFullPath(t.SrcStorageMp, t.SrcActualPath)); proxyURL != "" {
+		// Keep proxy selection in the transfer path: the download proxy may call
+		// OpenList's link API to resolve the original URL itself.
+		link = &model.Link{URL: proxyURL}
+		srcObj = model.UnwrapObjName(srcObj)
+	} else {
+		link, srcObj, err = op.Link(t.Ctx(), t.SrcStorage, t.SrcActualPath, model.LinkArgs{})
+	}
 	if err != nil {
 		return errors.WithMessagef(err, "failed get [%s] link", t.SrcActualPath)
 	}

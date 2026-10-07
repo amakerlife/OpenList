@@ -138,6 +138,7 @@ func getMainItems(config driver.Config) []driver.Item {
 	items = append(items, driver.Item{
 		Name: "down_proxy_url",
 		Type: conf.TypeText,
+		Help: "Also used to download source files for cross-storage copy, move and merge tasks",
 	})
 	items = append(items, driver.Item{
 		Name:    "disable_proxy_sign",
