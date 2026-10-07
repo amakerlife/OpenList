@@ -13,7 +13,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
-	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
 )
@@ -55,6 +54,9 @@ func (d *GuangYaPan) GetAddition() driver.Additional {
 }
 
 func (d *GuangYaPan) Init(ctx context.Context) error {
+	if _, err := parseUploadProxyURL(d.UploadProxyURL, d.UploadProxyToken); err != nil {
+		return err
+	}
 	d.ClientID = strings.TrimSpace(d.ClientID)
 	if d.ClientID == "" {
 		return errors.New("client_id is required, please provide a valid client_id")
@@ -421,8 +423,7 @@ func (d *GuangYaPan) Put(ctx context.Context, dstDir model.Obj, file model.FileS
 		return nil, errors.New("upload token is incomplete")
 	}
 
-	ossEndpoint := normalizeOSSEndpoint(token.EndPoint, token.BucketName)
-	client, err := oss.New(ossEndpoint, token.AccessKeyID, token.SecretAccessKey, oss.SecurityToken(token.SessionToken))
+	client, err := d.newOSSClient(token)
 	if err != nil {
 		return nil, fmt.Errorf("create oss client failed: %w", err)
 	}

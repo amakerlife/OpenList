@@ -20,6 +20,9 @@ type Addition struct {
 	PageSize       int    `json:"page_size" type:"number" default:"100"`
 	OrderBy        int    `json:"order_by" type:"number" options:"0,1,2,3,4" default:"3" help:"Sort field used by the file list"`
 	SortType       int    `json:"sort_type" type:"number" options:"0,1" default:"1" help:"Sort direction used by the file list"`
+
+	UploadProxyURL   string `json:"upload_proxy_url" help:"CF Worker root URL for OSS uploads, e.g. https://worker.example.com; leave empty for direct uploads"`
+	UploadProxyToken string `json:"upload_proxy_token" help:"Upload proxy secret; must match the Worker's UPLOAD_TOKEN"`
 }
 
 var config = driver.Config{
